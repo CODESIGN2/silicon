@@ -1,6 +1,9 @@
 The Silicon Web Framework
 =================================
 
+[![Build Status](https://travis-ci.org/CODESIGN2/silicon.svg?branch=master)](https://travis-ci.org/CODESIGN2/silicon) 
+[![Coverage Status](https://coveralls.io/repos/github/CODESIGN2/silicon/badge.svg?branch=coverage-works)](https://coveralls.io/github/CODESIGN2/silicon?branch=coverage-works)
+
 Documentation is hosted on http://siliconframework.org
 
 Contributing

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
-                      ${CMAKE_SOURCE_DIR}/../cmake)
+                      ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 
 enable_testing()
 
@@ -37,7 +37,10 @@ link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../third_party/install/lib
 				$ENV{HOME}/local/lib/x86_64-linux-gnu)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -ftemplate-depth=1024 -g -O0")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage") # enabling coverage
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftest-coverage --coverage") # enabling coverage
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ftest-coverage -g -O0 --coverage")
+set(CMAKE_EXE_LINKER_FLAGS, "${CMAKE_EXE_LINKER_FLAGS} -fprofile-arcs -ftest-coverage -lgcov --coverage")
+
 set(CPPNET_LIBS
     ${Boost_LIBRARIES}
     cppnetlib-uri cppnetlib-client-connections

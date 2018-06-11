@@ -3,81 +3,25 @@ sudo: required
 dist: trusty
 language: cpp
 
-matrix:
-  include:
-    - compiler: clang
-      addons:
-        apt:
-          sources:
-            - llvm-toolchain-trusty-5.0
-            - ubuntu-toolchain-r-test
-          packages:
-            - clang-5.0
-            - libstdc++-6-dev
-      env:
-        - LOCAL_CC=clang++-5.0
-        - LOCAL_CXX=clang++-5.0
-        - LOCAL_GCOV=llvm-cov
-    # - compiler: gcc
-    #   addons:
-    #     apt:
-    #       sources:
-    #         - ubuntu-toolchain-r-test
-    #       packages:
-    #         - g++-5
-    #   env:
-    #     - LOCAL_CXX=g++-5
-    #     - LOCAL_GCOV=gcov-5
-    # - compiler: gcc
-    #   addons:
-    #     apt:
-    #       sources:
-    #         - ubuntu-toolchain-r-test
-    #       packages:
-    #         - g++-6
-    #   env:
-    #     - LOCAL_CXX=g++-6
-    #     - LOCAL_GCOV=gcov-6
-    # - compiler: gcc
-    #   addons:
-    #     apt:
-    #       sources:
-    #         - ubuntu-toolchain-r-test
-    #       packages:
-    #         - g++-7
-    #   env:
-    #     - LOCAL_CXX=g++-7
-    #     - LOCAL_GCOV=gcov-7
-    # - compiler: clang
-    #   addons:
-    #     apt:
-    #       sources:
-    #         - ubuntu-toolchain-r-test
-    #         - llvm-toolchain-precise-3.6
-    #       packages:
-    #         - gcc-7 # just for the newer c++ headers
-    #         - clang-3.6
-    #         - llvm-3.6
-    #   env:
-    #     - LOCAL_CXX=clang++-3.6
-    #     - LOCAL_GCOV=llvm-cov-3.6
-    # - compiler: clang
-    #   addons:
-    #     apt:
-    #       sources:
-    #         - ubuntu-toolchain-r-test
-    #         - llvm-toolchain-precise-3.7
-    #       packages:
-    #         - gcc-7 # just for the newer c++ headers
-    #         - clang-3.7
-    #         - llvm-3.7
-    #   env:
-    #     - LOCAL_CXX=clang++-3.7
-    #     - LOCAL_GCOV=llvm-cov-3.7
+compiler: clang
+addons:
+  apt:
+    sources:
+      - llvm-toolchain-trusty-5.0
+      - ubuntu-toolchain-r-test
+    packages:
+      - clang-5.0
+      - libstdc++-6-dev
+      - lcov
+env:
+  global:
+    - LOCAL_CC=clang++-5.0
+    - LOCAL_CXX=clang++-5.0
+    - LOCAL_GCOV=llvm-cov
 
 before_install:
-    - $LOCAL_CXX --version
-    - $LOCAL_GCOV --version
+    - pip install --user cpp-coveralls
+    - gem install coveralls-lcov
     - sudo apt-get update -qq
     # Install deps
     - sudo apt-get install -qq libboost-all-dev libssl-dev lcov libsqlite3-dev
@@ -132,11 +76,15 @@ script:
     - make all test
 
 after_success:
-    - cd $HOME/build/$TRAVIS_REPO_SLUG/tests/build
-    - lcov --directory . --capture --gcov-tool `which $LOCAL_GCOV` --output-file coverage.info
-    - lcov --remove coverage.info 'tests/*' '/usr/*' --gcov-tool `which $LOCAL_GCOV` --output-file coverage.info
-    - lcov --list coverage.info
-    - coveralls-lcov --repo-token ${COVERALLS_TOKEN} coverage.info
-
+    - cd ${TRAVIS_BUILD_DIR}
+    - ls -lhaR
+    # - make generate-libcxx-coverage
+    - coveralls --root . -E ".*gtest.*" -E ".*CMakeFiles.*" -e "benchmarks" -e "examples" -e "tests" --gcov `which ${LOCAL_GCOV}` --verbose
+    # - ls -lhaR
+    - bash <(curl -s https://codecov.io/bash) -R . -g tests -g examples -g benchmarks -G silicon -x ${LOCAL_GCOV} -a "-a" -X coveragepy -X search || echo "Codecov did not collect coverage reports"
+    - LCOV_OPTIONS="--rc lcov_branch_coverage=1" && lcov -b . -d silicon -c --output-file coverage.info && lcov --remove coverage.info '/usr/*' --output-file coverage.info && lcov --list coverage.info
+    - echo "coverage.info\n" && base64 --wrap=64 coverage.info
+    - coveralls-lcov --repo-token ${COVERALLS_REPO_TOKEN} coverage.info
+    
 after_script:
     echo after_script
