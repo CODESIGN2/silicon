@@ -1,30 +1,33 @@
 # Use new trusty images, should yield newer compilers and packages
 sudo: required
-dist: trusty
+dist: xenial
 language: cpp
 
 compiler: clang
 addons:
   apt:
     sources:
-      - llvm-toolchain-trusty-5.0
-      - ubuntu-toolchain-r-test
+      - llvm-toolchain-xenial-5.0
     packages:
       - clang-5.0
-      - libstdc++-6-dev
+      - lldb-5.0
+      - lld-5.0
+      - libstdc++6
+      - libc6-dev
+      - libc6
       - lcov
 env:
   global:
     - LOCAL_CC=clang++-5.0
     - LOCAL_CXX=clang++-5.0
-    - LOCAL_GCOV=llvm-cov
+    - LOCAL_GCOV=llvm-cov-5.0
 
 before_install:
     - pip install --user cpp-coveralls
     - gem install coveralls-lcov
     - sudo apt-get update -qq
     # Install deps
-    - sudo apt-get install -qq libboost-all-dev libssl-dev lcov libsqlite3-dev
+    - sudo apt-get install -qq libboost-all-dev libssl-dev libsqlite3-dev libcurl4-openssl-dev libgnutls-dev libgcrypt-dev libmysqlclient-dev
     # Create env
     - mkdir -p $HOME/build
     # Install Rabbitmq-c
@@ -59,32 +62,34 @@ before_install:
 install:
     # Install Silicon
     - cd $HOME/build/$TRAVIS_REPO_SLUG
-    - mkdir -p build 
+    - mkdir -p build
     - cd build
     - cmake .. -DCMAKE_CXX_COMPILER=${LOCAL_CXX} -DCMAKE_INSTALL_PREFIX=$HOME/local
     - make -j 4 install
 
 before_script:
     - cd $HOME/build/$TRAVIS_REPO_SLUG
-    - mkdir -p tests/build 
-    - cd tests/build 
-    - lcov --directory . --zerocounters
+    - mkdir -p tests/build
+    - cd tests/build
+    - mkdir -p lcov
+    - lcov -d $HOME/build --zerocounters --output-file=lcov/tests.info
     - cmake .. -DCMAKE_CXX_COMPILER=${LOCAL_CXX} -DCMAKE_INSTALL_PREFIX=$HOME/local
 
 script:
-    - cd $HOME/build/$TRAVIS_REPO_SLUG/tests/build 
+    - cd $HOME/build/$TRAVIS_REPO_SLUG/tests/build
     - make all test
 
 after_success:
-    - cd ${TRAVIS_BUILD_DIR}
-    - ls -lhaR
-    # - make generate-libcxx-coverage
-    - coveralls --root . -E ".*gtest.*" -E ".*CMakeFiles.*" -e "benchmarks" -e "examples" -e "tests" --gcov `which ${LOCAL_GCOV}` --verbose
+    - cd $HOME/build/$TRAVIS_REPO_SLUG/tests/build
+    - lcov --no-external --capture --initial -d $HOME/build/$TRAVIS_REPO_SLUG --output-file=lcov/tests.info --gcov `which ${LOCAL_GCOV}`
+    - lcov --remove lcov/tests.info 'tests/*' -o lcov/tests.info
+    # - genhtml lcov/tests.info --output-directory lcov
+    # - coveralls --root . -E ".*gtest.*" -E ".*CMakeFiles.*" -e "benchmarks" -e "examples" -e "tests" --gcov `which ${LOCAL_GCOV}` --verbose
     # - ls -lhaR
-    - bash <(curl -s https://codecov.io/bash) -R . -g tests -g examples -g benchmarks -G silicon -x ${LOCAL_GCOV} -a "-a" -X coveragepy -X search || echo "Codecov did not collect coverage reports"
-    - LCOV_OPTIONS="--rc lcov_branch_coverage=1" && lcov -b . -d silicon -c --output-file coverage.info && lcov --remove coverage.info '/usr/*' --output-file coverage.info && lcov --list coverage.info
-    - echo "coverage.info\n" && base64 --wrap=64 coverage.info
-    - coveralls-lcov --repo-token ${COVERALLS_REPO_TOKEN} coverage.info
-    
+    # - bash <(curl -s https://codecov.io/bash) -R . -g tests -g examples -g benchmarks -G silicon -x ${LOCAL_GCOV} -a "-a" -X coveragepy -X search || echo "Codecov did not collect coverage reports"
+    # - LCOV_OPTIONS="--rc lcov_branch_coverage=1" && lcov -b . -d silicon -c --output-file coverage.info && lcov --remove coverage.info '/usr/*' --output-file coverage.info && lcov --list coverage.info
+    # - echo "coverage.info\n" && base64 --wrap=64 coverage.info
+    - coveralls-lcov --repo-token ${COVERALLS_REPO_TOKEN} lcov/tests.info
+
 after_script:
     echo after_script
